@@ -4,9 +4,13 @@ version = "0.1.0"
 authors = ["Seth Butler <seth.butler@ibm.com>"]
 
 [dependencies]
+bootloader_precompiled = "0.2.0"
 
 [profile.dev]
 panic = "abort" # disable stack unwinding on panic
 
 [profile.release]
 panic = "abort" # disable stack unwinding on panic
+
+[package.metadata.bootimage]
+default-target = "x86_64-rust_os.json"  # sets default target for bootimage command
