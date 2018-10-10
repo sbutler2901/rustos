@@ -6,5 +6,8 @@ bootimage:
 boot:
 	bootimage run
 
+bootbr:
+	bootimage build && bootimage run
+
 bootv2: $(BOOTBIN)
 	qemu-system-x86_64 -drive format=raw,file=$(BOOTBIN)
