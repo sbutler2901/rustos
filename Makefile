@@ -7,7 +7,7 @@ boot:
 	bootimage run
 
 bootbr:
-	bootimage build && bootimage run
+	bootimage build && bootimage run -- -serial mon:stdio -device isa-debug-exit,iobase=0xf4,iosize=0x04 -display none
 
 bootv2: $(BOOTBIN)
-	qemu-system-x86_64 -drive format=raw,file=$(BOOTBIN)
+	qemu-system-x86_64 -drive format=raw,file=$(BOOTBIN) -serial mon:stdio

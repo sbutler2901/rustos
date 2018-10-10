@@ -162,7 +162,7 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 
-fn print(args: fmt::Arguments) {
+pub fn print(args: fmt::Arguments) {
     use core::fmt::Write;       // imports write_fmt method from the Write trait
     WRITER.lock().write_fmt(args).unwrap();
 }
