@@ -16,6 +16,7 @@ extern crate array_init;
 
 pub mod vga_buffer;
 pub mod serial;
+pub mod gdt;
 
 // unsafe: relies on fact that a special QEMU device is attached to the I/O port w/ address 0xf4
 // Provides exiting qemu without a 'proper' shutdown
