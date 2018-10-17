@@ -1,7 +1,6 @@
 use pic8259_simple::ChainedPics;
-use spin;
+use spin::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, ExceptionStackFrame };
-use hlt_loop;
 
 pub const PIC_1_OFFSET: u8 = 32;    // offset interrupts to 32 (where CPU exceptions end)
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;  // start secondary PIC exceptions after 8 for first
@@ -10,16 +9,8 @@ pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;     // keyboard interrup
 
 // unsafe: wrong offset could cause undefined behavior
 // Mutex provides safe mutable access (when lock method used)
-pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
-
-
-// Exceptions
-
-// Initialize the CPUs IDT
-pub fn init_idt() {
-    IDT.load();
-}
+pub static PICS: Mutex<ChainedPics> =
+    Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
 // Static IDT for CPU to reference during exceptions
 lazy_static! {
@@ -47,6 +38,13 @@ lazy_static! {
     };
 }
 
+// Initialize the CPUs IDT
+pub fn init_idt() {
+    IDT.load();
+}
+
+// Exceptions
+
 // Occurs when a cpu exception is not caught.
 // if not implemented and needed a triple fault will occur
 // this results (mostly) in a complete reboot
@@ -55,6 +53,8 @@ extern "x86-interrupt" fn double_fault_handler(
     // error_code by definition always 0
     stack_frame: &mut ExceptionStackFrame, _error_code: u64
 ) {
+    use hlt_loop;
+
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }
