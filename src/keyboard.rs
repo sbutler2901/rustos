@@ -1,8 +1,24 @@
-// Module defining scan code mappings for keyboards
+use spin::Mutex;
+
+lazy_static! {
+    pub static ref SHIFT_ACTIVE: Mutex<bool> = {
+        let shift_active = false;
+        Mutex::new(shift_active)
+    };
+}
+
+fn transform(key: Option<char>) -> Option<char>{
+    if let Some(key_mapped) = key {
+        // Convert ascii letter to uppercase if shift key is active, does nothing if not letter
+        if *SHIFT_ACTIVE.lock() {
+            return Some(key_mapped.to_ascii_uppercase());
+        }
+    }
+    key
+}
 
 /// PS/2 Scancode Set 1 mapping
 pub fn scancode_map(scancode: u8) -> Option<char> {
-//    let mut SHIFT_ACTIVE = false;
     let key = match scancode {
         0x01 => None,       // escape
         0x02 => Some('1'),
@@ -45,10 +61,10 @@ pub fn scancode_map(scancode: u8) -> Option<char> {
         0x27 => Some(';'),
         0x28 => Some('\''),
         0x29 => Some('`'),
-        0x2A => {
-//            SHIFT_ACTIVE = true;
+        0x2A => {           // left shift pressed
+            *SHIFT_ACTIVE.lock() = true;
             None
-        },       // left shift
+        },
         0x2B => Some('\\'),
         0x2C => Some('z'),
         0x2D => Some('x'),
@@ -60,8 +76,8 @@ pub fn scancode_map(scancode: u8) -> Option<char> {
         0x33 => Some(','),
         0x34 => Some('.'),
         0x35 => Some('/'),
-        0x36 => {           // right shift
-//            SHIFT_ACTIVE = true;
+        0x36 => {           // right shift pressed
+            *SHIFT_ACTIVE.lock() = true;
             None
         },
         0x37 => None,       // (keypad) * pressed
@@ -69,14 +85,14 @@ pub fn scancode_map(scancode: u8) -> Option<char> {
         0x39 => Some(' '),
         0x3A => None,       // Capslock pressed
         0xAA => {           // left shift released
-//           SHIFT_ACTIVE = false;
+            *SHIFT_ACTIVE.lock() = false;
             None
         }
         0xB6 => {           // right shift released
-//            SHIFT_ACTIVE = false;
+            *SHIFT_ACTIVE.lock() = false;
             None
         }
         _ => None,
     };
-    key
+    transform(key)
 }
