@@ -60,14 +60,21 @@ lazy_static! {
 /// Fault: occurs when dividing any number by 0
 extern "x86-interrupt" fn divide_by_zero_handler(
     stack_frame: &mut ExceptionStackFrame
-) { println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame); }
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
+    hlt_loop();
+}
 
 /// Fault: general exception errors
 extern "x86-interrupt" fn general_protection_fault_handler(
     stack_frame: &mut ExceptionStackFrame, _error_code: u64
 ) {
+    use hlt_loop;
 //    println!("Error code: {}", error_code);
     println!("EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}", stack_frame);
+    hlt_loop();
 }
 
 /// Fault: sys call interrupt

@@ -41,11 +41,14 @@ pub extern "C" fn _start() -> ! {
     rust_os::gdt::init();
     init_idt();
 
-    let _ = 10 / 0;
-//    unsafe {
-//        asm!("mov eax, 2" :::: "intel");
-//        asm!("divl 0x0");
-//    }
+    unsafe {
+        asm!(r"
+            mov eax, 0x1
+            mov ecx, 0x0
+            div ecx"
+            :::: "intel"
+        );
+    }
 
     serial_println!("failed");
     serial_println!("No exception occurred");
