@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(abi_x86_interrupt)]  // enable usage of unstable x86-interrupt calling convention
 
 #[macro_use]
 extern crate lazy_static;
@@ -15,10 +16,12 @@ extern crate std;
 #[cfg(test)]
 extern crate array_init;
 
+#[macro_use]
 pub mod vga_buffer;
 pub mod serial;
 pub mod gdt;
 pub mod interrupts;
+pub mod keyboard;
 
 // Notify the CPU to halt until the next interrupt arrives rather than
 // the expensive loop
