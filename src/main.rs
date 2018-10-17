@@ -29,8 +29,6 @@ pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::enable();     // enables external interrupts
 
 
-//    unsafe { asm!("mov cr4, 1" :::: "intel"); }
-
     println!("It did not crash!");
     rust_os::hlt_loop();
 }

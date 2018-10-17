@@ -1,6 +1,6 @@
 use pic8259_simple::ChainedPics;
 use spin::Mutex;
-use x86_64::structures::idt::{InterruptDescriptorTable, ExceptionStackFrame };
+use x86_64::structures::idt::{InterruptDescriptorTable, PageFaultErrorCode, ExceptionStackFrame };
 
 pub const PIC_1_OFFSET: u8 = 32;    // offset interrupts to 32 (where CPU exceptions end)
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;  // start secondary PIC exceptions after 8 for first
@@ -24,9 +24,10 @@ lazy_static! {
         use gdt;
 
         let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
+
         idt.divide_by_zero.set_handler_fn(divide_by_zero_handler);
-        idt.general_protection_fault.set_handler_fn(general_protection_fault_handler);
+        idt.debug.set_handler_fn(debug_handler);
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
 
         // unsafe: caller must ensure that used stack index is valid
         // and not already used for another exception
@@ -35,6 +36,9 @@ lazy_static! {
                 // tells CPU to switch to this stack before invoking handler
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
          }
+
+        idt.general_protection_fault.set_handler_fn(general_protection_fault_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
 
         // PIC interrupts
         let timer_interrupt_id = usize::from(TIMER_INTERRUPT_ID);
@@ -67,26 +71,27 @@ extern "x86-interrupt" fn divide_by_zero_handler(
     hlt_loop();
 }
 
-/// Fault: general exception errors
-extern "x86-interrupt" fn general_protection_fault_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+/// Fault/Trip: debug exceptions
+extern "x86-interrupt" fn debug_handler(
+    stack_frame: &mut ExceptionStackFrame
 ) {
     use hlt_loop;
-//    println!("Error code: {}", error_code);
-    println!("EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}", stack_frame);
+
+    println!("EXCEPTION: DEBUG\n{:#?}", stack_frame);
     hlt_loop();
 }
 
-/// Fault: sys call interrupt
-extern "x86-interrupt" fn sys_call_interrupt_handler(
+/// Trap: Handler for breakpoint exception
+extern "x86-interrupt" fn breakpoint_handler(
     stack_frame: &mut ExceptionStackFrame
 ) {
-    println!("EXCEPTION: SYS CALL\n{:#?}", stack_frame);
+    println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
+
 // Occurs when a cpu exception is not caught.
 // if not implemented and needed a triple fault will occur
 // this results (mostly) in a complete reboot
-/// Handler for double fault exception
+/// About: Handler for double fault exception
 extern "x86-interrupt" fn double_fault_handler(
     // error_code by definition always 0
     stack_frame: &mut ExceptionStackFrame, _error_code: u64
@@ -97,12 +102,28 @@ extern "x86-interrupt" fn double_fault_handler(
     hlt_loop();
 }
 
-/// Handler for breakpoint exception
-extern "x86-interrupt" fn breakpoint_handler(
-    stack_frame: &mut ExceptionStackFrame
+/// Fault: general exception errors
+extern "x86-interrupt" fn general_protection_fault_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
 ) {
-    println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+    use hlt_loop;
+//    println!("Error code: {}", error_code);
+    println!("EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}", stack_frame);
+    hlt_loop();
 }
+
+/// Fault: Handler for page fault exception
+extern "x86-interrupt" fn page_fault_handler(
+    // error_code by definition always 0
+    stack_frame: &mut ExceptionStackFrame, _error_code: PageFaultErrorCode
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: PAGE FAULT\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+// Hardware Interrupts
 
 /// Handler to timer interrupts
 extern "x86-interrupt" fn timer_interrupt_handler(
@@ -134,4 +155,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     }*/
     //print!("Exception: breakpoint\n{:#?}", stack_frame);
     unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID)}
+}
+
+// Software Interrupts
+
+/// Fault: sys call interrupt
+extern "x86-interrupt" fn sys_call_interrupt_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    println!("EXCEPTION: SYS CALL\n{:#?}", stack_frame);
 }
