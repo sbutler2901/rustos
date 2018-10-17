@@ -94,7 +94,7 @@ extern "x86-interrupt" fn breakpoint_handler(
 extern "x86-interrupt" fn timer_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame
 ) {
-    print!(".");
+//    print!(".");
     // PIC waits for EOI signal notifying ready for next interrupt
     // unsafe: incorrect interrupt vector number could result in deleting unsent interrupt
     // causing system to hang
@@ -106,18 +106,28 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame
 ) {
     use x86_64::instructions::port::Port;
+
     let port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
     let key = scancode_map(scancode);
+
     if let Some(key) = key {
+//        if (SHIFT_ACTIVE && key.is_alphabetic()) {
+//            print!("{}", key.to_uppercase());
+//        }
         print!("{}", key);
+    } else {
+        print!("{}", scancode);
     }
     //print!("Exception: breakpoint\n{:#?}", stack_frame);
     unsafe { interrupts::PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID)}
 }
 
+/// PS/2 Scancode Set 1 mapping
 fn scancode_map(scancode: u8) -> Option<char> {
+//    let mut SHIFT_ACTIVE = false;
     let key = match scancode {
+        0x01 => None,       // escape
         0x02 => Some('1'),
         0x03 => Some('2'),
         0x04 => Some('3'),
@@ -128,6 +138,67 @@ fn scancode_map(scancode: u8) -> Option<char> {
         0x09 => Some('8'),
         0x0A => Some('9'),
         0x0B => Some('0'),
+        0x0C => Some('-'),
+        0x0D => Some('='),
+        0x0E => None,       // backspace
+        0x0F => None,       // tab
+        0x10 => Some('q'),
+        0x11 => Some('w'),
+        0x12 => Some('e'),
+        0x13 => Some('r'),
+        0x14 => Some('t'),
+        0x15 => Some('y'),
+        0x16 => Some('u'),
+        0x17 => Some('i'),
+        0x18 => Some('o'),
+        0x19 => Some('p'),
+        0x1A => Some('['),
+        0x1B => Some(']'),
+        0x1C => None,       // enter
+        0x1D => None,       // left ctrl
+        0x1E => Some('a'),
+        0x1F => Some('s'),
+        0x20 => Some('d'),
+        0x21 => Some('f'),
+        0x22 => Some('g'),
+        0x23 => Some('h'),
+        0x24 => Some('j'),
+        0x25 => Some('k'),
+        0x26 => Some('l'),
+        0x27 => Some(';'),
+        0x28 => Some('\''),
+        0x29 => Some('`'),
+        0x2A => {
+//            SHIFT_ACTIVE = true;
+            None
+        },       // left shift
+        0x2B => Some('\\'),
+        0x2C => Some('z'),
+        0x2D => Some('x'),
+        0x2E => Some('c'),
+        0x2F => Some('v'),
+        0x30 => Some('b'),
+        0x31 => Some('n'),
+        0x32 => Some('m'),
+        0x33 => Some(','),
+        0x34 => Some('.'),
+        0x35 => Some('/'),
+        0x36 => {           // right shift
+//            SHIFT_ACTIVE = true;
+            None
+        },
+        0x37 => None,       // (keypad) * pressed
+        0x38 => None,       // left alt
+        0x39 => Some(' '),
+        0x3A => None,       // Capslock pressed
+        0xAA => {           // left shift released
+//           SHIFT_ACTIVE = false;
+            None
+        }
+        0xB6 => {           // right shift released
+//            SHIFT_ACTIVE = false;
+            None
+        }
         _ => None,
     };
     key
