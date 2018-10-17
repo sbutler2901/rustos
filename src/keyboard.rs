@@ -1,7 +1,7 @@
 use spin::Mutex;
 
 lazy_static! {
-    pub static ref SHIFT_ACTIVE: Mutex<bool> = {
+    static ref SHIFT_ACTIVE: Mutex<bool> = {
         let shift_active = false;
         Mutex::new(shift_active)
     };

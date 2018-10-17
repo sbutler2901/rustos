@@ -45,6 +45,15 @@ lazy_static! {
 
 // Exceptions
 
+// Faults: These can be corrected and the program may continue as if nothing happened.
+// Traps: Traps are reported immediately after the execution of the trapping instruction.
+// Aborts: Some severe unrecoverable error.
+
+/// Fault: occurs when dividing any number by 0
+extern "x86-interrupt" fn divide_by_zero_handler(
+    stack_frame: &mut ExceptionStackFrame
+) { println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame); }
+
 // Occurs when a cpu exception is not caught.
 // if not implemented and needed a triple fault will occur
 // this results (mostly) in a complete reboot
