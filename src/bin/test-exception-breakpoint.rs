@@ -57,9 +57,7 @@ pub extern "C" fn _start() -> ! {
         }
     }
 
-    unsafe {
-        exit_qemu();
-    }
+    unsafe { exit_qemu(); }
     hlt_loop();
 }
 
@@ -70,8 +68,6 @@ fn panic(info: &PanicInfo) -> ! {
     serial_println!("failed");
     serial_println!("{}", info);
 
-    unsafe {
-        exit_qemu();
-    }
+    unsafe { exit_qemu(); }
     hlt_loop();
 }

@@ -6,6 +6,7 @@ pub const PIC_1_OFFSET: u8 = 32;    // offset interrupts to 32 (where CPU except
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;  // start secondary PIC exceptions after 8 for first
 pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET;    // timer interrupt (0 + offset)
 pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;     // keyboard interrupt
+pub const SYS_CALL_ID: u8 = 0x80;       // base 10: 128
 
 // unsafe: wrong offset could cause undefined behavior
 // Mutex provides safe mutable access (when lock method used)
@@ -24,6 +25,8 @@ lazy_static! {
 
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.divide_by_zero.set_handler_fn(divide_by_zero_handler);
+        idt.general_protection_fault.set_handler_fn(general_protection_fault_handler);
 
         // unsafe: caller must ensure that used stack index is valid
         // and not already used for another exception
@@ -39,6 +42,10 @@ lazy_static! {
 
         let keyboard_interrupt_id = usize::from(KEYBOARD_INTERRUPT_ID);
         idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
+
+        // Sys call interrupt
+        let sys_call_interrupt_id = usize::from(SYS_CALL_ID);
+        idt[sys_call_interrupt_id].set_handler_fn(sys_call_interrupt_handler);
         idt
     };
 }
@@ -53,8 +60,22 @@ lazy_static! {
 /// Fault: occurs when dividing any number by 0
 extern "x86-interrupt" fn divide_by_zero_handler(
     stack_frame: &mut ExceptionStackFrame
-) { println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame); }
+) { println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame); }
 
+/// Fault: general exception errors
+extern "x86-interrupt" fn general_protection_fault_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+) {
+//    println!("Error code: {}", error_code);
+    println!("EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}", stack_frame);
+}
+
+/// Fault: sys call interrupt
+extern "x86-interrupt" fn sys_call_interrupt_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    println!("EXCEPTION: SYS CALL\n{:#?}", stack_frame);
+}
 // Occurs when a cpu exception is not caught.
 // if not implemented and needed a triple fault will occur
 // this results (mostly) in a complete reboot

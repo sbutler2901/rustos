@@ -4,6 +4,7 @@
 #![cfg_attr(not(test), no_main)]
 // silence certain warnings when testing is being performed
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![feature(asm)]
 
 #[macro_use]
 extern crate rust_os;
@@ -14,6 +15,7 @@ use rust_os::{gdt, interrupts};
 // The function expected in linker for the start of the program
 #[cfg(not(test))] // only compile when test flag is not set
 #[no_mangle]        // ensures function name is not mangled for usage by bootloader
+#[allow(const_err)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
     serial_println!("Hello Host{}", "!");
@@ -25,6 +27,9 @@ pub extern "C" fn _start() -> ! {
     // unsafe: possible undefined behavior if PIC misconfigured
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // enables external interrupts
+
+    //let _ = 10 / 0;
+    //unsafe { asm!("mov cr4, 1" :::: "intel"); }
 
     println!("It did not crash!");
     rust_os::hlt_loop();
