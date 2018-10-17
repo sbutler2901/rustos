@@ -5,7 +5,7 @@ use x86_64::structures::gdt::SegmentSelector;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
-// Used to added selectors to the static GDT
+// Used to add selectors to the static GDT
 struct Selectors {
     code_selector: SegmentSelector,
     tss_selector: SegmentSelector,
@@ -15,13 +15,16 @@ pub fn init() {
     use x86_64::instructions::segmentation::set_cs;
     use x86_64::instructions::tables::load_tss;
 
-    GDT.0.load();   // load the actual GDT
+    // load the actual GDT: references the actual GDT at
+    // index 0 of the static GDT tuple
+    GDT.0.load();
+
     // unsafe because might be possible to break memory safety
     // by loading invalid selectors.
     unsafe {
-        // reload the code segment register with the new one in the GDT
+        // reload the code segment register with the new one in the GDT tuples index 1
         set_cs(GDT.1.code_selector);
-        // tell CPU to use TSS in the GDT
+        // tell CPU to use TSS in the GDT tuples index 1
         load_tss(GDT.1.tss_selector);
     }
 }
@@ -45,7 +48,10 @@ lazy_static! {
     static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
         // define the Interrupt Stack Table's 0th index (of 7 total)
-        // for the double fault handler
+        // for the double fault handler. This is done to prevent the
+        // the double fault exception handler from being swapped out,
+        // or unavailable cause a triple fault! The CPU automatically
+        // switches the stack for you when the interrupt occurs.
         tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
             // create a 4KB stack for double fault
             const STACK_SIZE: usize = 4096;

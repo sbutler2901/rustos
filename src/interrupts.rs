@@ -12,6 +12,11 @@ pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;     // keyboard interrup
 pub static PICS: Mutex<ChainedPics> =
     Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
+// Initialize the CPUs IDT
+pub fn init_idt() {
+    IDT.load();
+}
+
 // Static IDT for CPU to reference during exceptions
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -36,11 +41,6 @@ lazy_static! {
         idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
         idt
     };
-}
-
-// Initialize the CPUs IDT
-pub fn init_idt() {
-    IDT.load();
 }
 
 // Exceptions
