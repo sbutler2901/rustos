@@ -44,6 +44,7 @@ lazy_static! {
 }
 
 // Exceptions
+// Note: Updates to these functions should also be made in their corresponding test-exception-*.rs files
 
 // Faults: These can be corrected and the program may continue as if nothing happened.
 // Traps: Traps are reported immediately after the execution of the trapping instruction.

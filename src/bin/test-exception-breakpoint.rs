@@ -9,7 +9,7 @@ extern crate x86_64;
 #[macro_use]
 extern crate lazy_static;
 
-use rust_os::exit_qemu;
+use rust_os::{exit_qemu, hlt_loop};
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
@@ -18,6 +18,8 @@ use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 // used to verify breakpoint_handler is only called once
 static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
 
+pub fn init_idt() { IDT.load(); }
+
 // start: Dup from main
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -25,10 +27,6 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt
     };
-}
-
-pub fn init_idt() {
-    IDT.load();
 }
 
 extern "x86-interrupt" fn breakpoint_handler(_stack_frame: &mut ExceptionStackFrame) {
@@ -62,8 +60,7 @@ pub extern "C" fn _start() -> ! {
     unsafe {
         exit_qemu();
     }
-
-    loop {}
+    hlt_loop();
 }
 
 /// This function is called on panic.
@@ -76,7 +73,5 @@ fn panic(info: &PanicInfo) -> ! {
     unsafe {
         exit_qemu();
     }
-
-    loop {}
+    hlt_loop();
 }
-
