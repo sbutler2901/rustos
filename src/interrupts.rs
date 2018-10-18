@@ -28,6 +28,11 @@ lazy_static! {
         idt.divide_by_zero.set_handler_fn(divide_by_zero_handler);
         idt.debug.set_handler_fn(debug_handler);
         idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.non_maskable_interrupt.set_handler_fn(non_maskable_interrupt_handler);
+        idt.overflow.set_handler_fn(overflow_interrupt_handler);
+        idt.bound_range_exceeded.set_handler_fn(bound_range_exceeded_handler);
+        idt.invalid_opcode.set_handler_fn(invalid_opcode_handler);
+        idt.device_not_available.set_handler_fn(device_not_available_handler);
 
         // unsafe: caller must ensure that used stack index is valid
         // and not already used for another exception
@@ -37,8 +42,17 @@ lazy_static! {
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
          }
 
+        idt.invalid_tss.set_handler_fn(invalid_tss_handler);
+        idt.segment_not_present.set_handler_fn(segment_not_present_handler);
+        idt.stack_segment_fault.set_handler_fn(stack_segment_fault_handler);
         idt.general_protection_fault.set_handler_fn(general_protection_fault_handler);
         idt.page_fault.set_handler_fn(page_fault_handler);
+        idt.x87_floating_point.set_handler_fn(x87_floating_point_handler);
+        idt.alignment_check.set_handler_fn(alignment_check_handler);
+        idt.machine_check.set_handler_fn(machine_check_handler);
+        idt.simd_floating_point.set_handler_fn(simd_floating_point_handler);
+        idt.virtualization.set_handler_fn(virtualization_handler);
+        idt.security_exception.set_handler_fn(security_exception_handler);
 
         // PIC interrupts
         let timer_interrupt_id = usize::from(TIMER_INTERRUPT_ID);
@@ -88,6 +102,56 @@ extern "x86-interrupt" fn breakpoint_handler(
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
 
+/// Interrupt: Handler for non maskable interrupts
+extern "x86-interrupt" fn non_maskable_interrupt_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: NON-MASKABLE\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Trip: Handler for
+extern "x86-interrupt" fn overflow_interrupt_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: OVERFLOW\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: handles bound range exceeded exception
+extern "x86-interrupt" fn bound_range_exceeded_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: BOUND RANGE EXCEEDED\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: handles invalid opcode exception
+extern "x86-interrupt" fn invalid_opcode_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: INVALID OPCODE\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: handles device not available exception
+extern "x86-interrupt" fn device_not_available_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: DEVICE NOT AVAILABLE\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
 // Occurs when a cpu exception is not caught.
 // if not implemented and needed a triple fault will occur
 // this results (mostly) in a complete reboot
@@ -99,6 +163,36 @@ extern "x86-interrupt" fn double_fault_handler(
     use hlt_loop;
 
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: handles invalid tss exception
+extern "x86-interrupt" fn invalid_tss_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: INVALID TSS\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: handles segment not present exception
+extern "x86-interrupt" fn segment_not_present_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: SEGMENT NOT PRESENT\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: handles stack segment fault exception
+extern "x86-interrupt" fn stack_segment_fault_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: STACK SEGMENT FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }
 
@@ -114,12 +208,71 @@ extern "x86-interrupt" fn general_protection_fault_handler(
 
 /// Fault: Handler for page fault exception
 extern "x86-interrupt" fn page_fault_handler(
-    // error_code by definition always 0
     stack_frame: &mut ExceptionStackFrame, _error_code: PageFaultErrorCode
 ) {
     use hlt_loop;
 
     println!("EXCEPTION: PAGE FAULT\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: Handler for x87 floating point exception
+extern "x86-interrupt" fn x87_floating_point_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: X87 FLOATING POINT\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: Handler for alignment check exception
+extern "x86-interrupt" fn alignment_check_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: ALIGNMENT CHECK\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Abort: Handler for machine check exception
+extern "x86-interrupt" fn machine_check_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: MACHINE CHECK\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: Handler for simd floating point exception
+extern "x86-interrupt" fn simd_floating_point_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: SIMD FLOATING POINT\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: Handler virtualization exception
+extern "x86-interrupt" fn virtualization_handler(
+    stack_frame: &mut ExceptionStackFrame
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: VIRTUALIZATION\n{:#?}", stack_frame);
+    hlt_loop();
+}
+
+/// Fault: Handler security exception
+extern "x86-interrupt" fn security_exception_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+) {
+    use hlt_loop;
+
+    println!("EXCEPTION: SECURITY EXCEPTION\n{:#?}", stack_frame);
     hlt_loop();
 }
 
