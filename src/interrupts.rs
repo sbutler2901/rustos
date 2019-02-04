@@ -211,7 +211,12 @@ extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut ExceptionStackFrame, _error_code: PageFaultErrorCode
 ) {
     use hlt_loop;
+    // automatically set on page fault to accessed virtual address that caused page fault
+    use x86_64::registers::control::Cr2;
 
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("{:#?}", stack_frame);
     println!("EXCEPTION: PAGE FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }

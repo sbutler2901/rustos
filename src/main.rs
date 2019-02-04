@@ -28,6 +28,14 @@ pub extern "C" fn _start() -> ! {
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // enables external interrupts
 
+    // Testing zone
+
+    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
+    for i in 0..10 {
+        let entry = unsafe { *level_4_table_pointer.offset(i) };
+        println!("Entry {}: {:#x}", i, entry);
+    }
+
 
     println!("It did not crash!");
     rust_os::hlt_loop();
