@@ -8,6 +8,7 @@
 
 #[macro_use]
 extern crate rust_os;
+extern crate x86_64;
 
 use core::panic::PanicInfo;
 use rust_os::{gdt, interrupts};
@@ -30,10 +31,23 @@ pub extern "C" fn _start() -> ! {
 
     // Testing zone
 
-    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
+    use x86_64::structures::paging::PageTable;
+    use x86_64::registers::control:: Cr3;
+
+    // The control register 3 contains the currently active level 4 page table.
+    // This give us the physical address of the page table
+    let (level_4_page_table, _) = Cr3::read();
+    println!("Level 4 page table at : {:?}", level_4_page_table.start_address());
+
+    // Accessing physical memory directly not possible when paging is active. Need virtual page
+    // that is mapped to the physical frame at address 0x1000.
+    // The bootloader uses recursive page tables to map the last page of the virtual address space to the
+    // physical frame of the level 4 page table: the subsequent memory address.
+    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;  // cast as raw pointer to a PageTable
+    // transform into a rust reference providing safe bounds checked indexing operations
+    let level_4_table: &PageTable = unsafe { &* level_4_table_ptr };
     for i in 0..10 {
-        let entry = unsafe { *level_4_table_pointer.offset(i) };
-        println!("Entry {}: {:#x}", i, entry);
+        println!("Entry {}: {:?}", i, level_4_table[i]);
     }
 
 
