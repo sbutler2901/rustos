@@ -22,6 +22,7 @@ pub mod serial;
 pub mod gdt;
 pub mod interrupts;
 pub mod keyboard;
+pub mod memory;
 
 // Notify the CPU to halt until the next interrupt arrives rather than
 // the expensive loop
