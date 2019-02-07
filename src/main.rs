@@ -36,6 +36,7 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
     use x86_64::structures::paging::PageTable;
     use x86_64::registers::control:: Cr3;
     use x86_64::VirtAddr;
+    use rust_os::memory::translate_addr;
 
     // The control register 3 contains the currently active level 4 page table.
     // This give us the physical address of the page table
@@ -54,6 +55,8 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
         println!("Entry {}: {:?}", i, level_4_table[i]);
     }
 
+    // This address is identity mapped for VGA and so the translation doesn't change the address
+    println!("0xb8000 -> {:?}", translate_addr(0xb8000));
 
     println!("It did not crash!");
     rust_os::hlt_loop();
