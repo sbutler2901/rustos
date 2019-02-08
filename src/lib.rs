@@ -3,7 +3,7 @@
 
 #[macro_use]
 extern crate lazy_static;
-extern crate bootloader_precompiled;
+extern crate bootloader;
 extern crate volatile;
 extern crate spin;
 extern crate uart_16550;    // as serial interface for port mapped I/O
