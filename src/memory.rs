@@ -1,22 +1,19 @@
-// in src/memory.rs
-
-//use x86_64::structures::paging::{Mapper, Page, PageTable, RecursivePageTable};
 use x86_64::{VirtAddr, PhysAddr, structures::paging::*};
-//use x86_64::structures::paging::{FrameAllocator, PhysFrame, Size4KiB};
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 
 /// A FrameAllocator that always returns `None`.
 pub struct EmptyFrameAllocator;
 
-// Since we know that no new page tables are required for the address
-// 0x1000, a frame allocator that always returns None suffices.
 impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         None
     }
 }
 
-pub struct BootInfoFrameAllocator<I> where I: Iterator<Item = PhysFrame> {
+/// A FrameAllocator that returns the next available free frame
+pub struct BootInfoFrameAllocator<I>
+    where I: Iterator<Item = PhysFrame>
+{
     // can be initialized with an arbitrary Iterator of frames.
     // This allows us to just delegate alloc calls to the Iterator::next method.
     frames: I,
@@ -39,14 +36,14 @@ pub fn init_frame_allocator(
         // convert the memory map to an iterator of MemoryRegions
         .iter()
         // skip any reserved or otherwise unavailable regions.
-        // rames that are used by our kernel (code, data or stack) or to store the boot
+        // Regions that are used by our kernel (code, data or stack) or to store the boot
         // information are already marked as InUse or similar by bootloader
         .filter(|r| r.region_type == MemoryRegionType::Usable);
 
     // transform our iterator of memory regions to an iterator of address ranges.
     let addr_ranges = regions.map(|r| r.range.start_addr()..r.range.end_addr());
 
-    //We convert each range to an iterator through the into_iter method and
+    // We convert each range to an iterator through the into_iter method and
     // then choose every 4096th address using step_by. Since 4096 bytes (= 4 KiB) is the page size,
     // we get the start address of each frame. The bootloader page aligns all usable memory areas
     // so that we don't need any alignment or rounding code here. By using flat_map instead of map,
@@ -96,10 +93,8 @@ pub fn create_example_mapping(
     map_to_result.expect("map_to failed").flush();
 }
 
-/// Creates a RecursivePageTable instance from the level 4 address.
-///
-/// This function is unsafe because it can break memory safety if an invalid
-/// address is passed.
+// Creates a RecursivePageTable instance from the level 4 address.
+// Unsafe because it can break memory safety if an invalid address is passed.
 pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
     /// Rust currently treats the whole body of unsafe functions as an unsafe
     /// block, which makes it difficult to see which operations are unsafe. To

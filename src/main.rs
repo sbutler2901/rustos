@@ -34,9 +34,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     x86_64::instructions::interrupts::enable();     // enables external interrupts
 
     let mut recursive_page_table: RecursivePageTable = unsafe { init(boot_info.p4_table_addr as usize) };
-
-
     let mut frame_allocator = init_frame_allocator(&boot_info.memory_map);
+
+    for region in boot_info.memory_map.iter() {
+        serial_println!("{:?} {:?}", region.region_type, region.range);
+    }
 
     // create mapping at 0x1000
     create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
