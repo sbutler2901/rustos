@@ -12,8 +12,7 @@ extern crate x86_64;
 extern crate bootloader;
 
 use core::panic::PanicInfo;
-use rust_os::{gdt, interrupts};
-use rust_os::memory::{init, translate_addr, create_example_mapping, init_frame_allocator};
+use rust_os::{gdt, interrupts, memory};
 use bootloader::{bootinfo::BootInfo, entry_point};
 use x86_64::structures::paging::RecursivePageTable;
 
@@ -33,15 +32,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // enables external interrupts
 
-    let mut recursive_page_table: RecursivePageTable = unsafe { init(boot_info.p4_table_addr as usize) };
-    let mut frame_allocator = init_frame_allocator(&boot_info.memory_map);
+    let mut recursive_page_table: RecursivePageTable = unsafe { memory::paging::init(boot_info.p4_table_addr as usize) };
+    let mut frame_allocator = memory::paging::init_frame_allocator(&boot_info.memory_map);
 
     for region in boot_info.memory_map.iter() {
         serial_println!("{:?} {:?}", region.region_type, region.range);
     }
 
     // create mapping at 0x1000
-    create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
+    memory::paging::create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
 
     // Write string New! to VGA buffer. Offsets by 900 since vga buffer pushes
     // top line off screen on next println
@@ -52,7 +51,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
 
     // This address is identity mapped for VGA and so the translation doesn't change the address
-    println!("0xb8000 -> {:?}", translate_addr(0xb8000, &recursive_page_table));
+    println!("0xb8000 -> {:?}", memory::paging::translate_addr(0xb8000, &recursive_page_table));
 
     println!("It did not crash!");
     rust_os::hlt_loop();
