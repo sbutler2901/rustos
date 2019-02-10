@@ -3,7 +3,6 @@ pub mod heap;
 
 use x86_64::{VirtAddr, structures::paging::*};
 use bootloader::bootinfo::BootInfo;
-//use x86_64::structures::paging::PageTableFlags as Flags;
 
 pub fn init(boot_info: &'static BootInfo) {
     let mut recursive_page_table: RecursivePageTable = unsafe { self::paging::init(boot_info.p4_table_addr as usize) };
@@ -19,7 +18,4 @@ pub fn init(boot_info: &'static BootInfo) {
     map_to_result.expect("map_to failed for heap allocations").flush();
 
     ::HEAP_ALLOCATOR.init(page);
-
-//    paging::create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
-
 }

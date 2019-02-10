@@ -40,17 +40,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         serial_println!("{:?} {:?}", region.region_type, region.range);
     }
 
-    let layout = core::alloc::Layout::new::<u32>();
-
-    let test0 = unsafe { rust_os::HEAP_ALLOCATOR.alloc(layout) };
-    serial_println!("main test0: {:?}", test0);
-
-    let test1 = unsafe { rust_os::HEAP_ALLOCATOR.alloc(layout) };
-    serial_println!("main test1: {:?}", test1);
-
-    unsafe { rust_os::HEAP_ALLOCATOR.dealloc(test0, layout)}
-    unsafe { rust_os::HEAP_ALLOCATOR.dealloc(test1, layout)}
-
     let mut test: Vec<u64> = Vec::new();
 
     for item in 0..1 {
