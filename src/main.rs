@@ -16,7 +16,6 @@ use core::panic::PanicInfo;
 use rust_os::{gdt, interrupts, memory};
 use bootloader::{bootinfo::BootInfo, entry_point};
 use alloc::vec::Vec;
-use core::alloc::GlobalAlloc;
 
 entry_point!(kernel_main);
 
