@@ -4,17 +4,19 @@
 #![cfg_attr(not(test), no_main)]
 // silence certain warnings when testing is being performed
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
-#![feature(asm)]
+#![feature(alloc)]
 
 #[macro_use]
 extern crate rust_os;
 extern crate x86_64;
 extern crate bootloader;
+#[macro_use]
+extern crate alloc;
 
 use core::panic::PanicInfo;
 use rust_os::{gdt, interrupts, memory};
 use bootloader::{bootinfo::BootInfo, entry_point};
-use x86_64::structures::paging::RecursivePageTable;
+use alloc::vec::Vec;
 
 entry_point!(kernel_main);
 
@@ -32,26 +34,17 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // enables external interrupts
 
-    let mut recursive_page_table: RecursivePageTable = unsafe { memory::paging::init(boot_info.p4_table_addr as usize) };
-    let mut frame_allocator = memory::paging::init_frame_allocator(&boot_info.memory_map);
+    memory::init(boot_info);
 
     for region in boot_info.memory_map.iter() {
         serial_println!("{:?} {:?}", region.region_type, region.range);
     }
 
-    // create mapping at 0x1000
-    memory::paging::create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
+    let test: Vec<i32> = vec![0,1,2];
 
-    // Write string New! to VGA buffer. Offsets by 900 since vga buffer pushes
-    // top line off screen on next println
-    // Only works because know level 1 page table is already mapped and don't need frame allocator
-//    unsafe { (0x1900 as *mut u64).write_volatile(0xf021f077f065f04e)};
-
-    // Writes to vga buffer with page mapped by frame allocator
-    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
-
-    // This address is identity mapped for VGA and so the translation doesn't change the address
-    println!("0xb8000 -> {:?}", memory::paging::translate_addr(0xb8000, &recursive_page_table));
+    for item in test {
+        println!("{:?}", item);
+    }
 
     println!("It did not crash!");
     rust_os::hlt_loop();

@@ -27,6 +27,35 @@ impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
     }
 }
 
+// Creates a RecursivePageTable instance from the level 4 address.
+// Unsafe because it can break memory safety if an invalid address is passed.
+pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
+    /// Rust currently treats the whole body of unsafe functions as an unsafe
+    /// block, which makes it difficult to see which operations are unsafe. To
+    /// limit the scope of unsafe we use a safe inner function.
+    /// RFC: https://github.com/rust-lang/rfcs/pull/2585
+    fn init_inner(level_4_table_addr: usize) -> RecursivePageTable<'static> {
+        let level_4_table_ptr = level_4_table_addr as *mut PageTable;
+        let level_4_table = unsafe { &mut *level_4_table_ptr };
+        RecursivePageTable::new(level_4_table).unwrap()
+    }
+
+    init_inner(level_4_table_addr)
+}
+
+/// Returns the physical address for the given virtual address, or `None` if
+/// the virtual address is not mapped.
+pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
+                      -> Option<PhysAddr>
+{
+    let addr = VirtAddr::new(addr);
+    let page: Page = Page::containing_address(addr);
+
+    // perform the translation
+    let frame = recursive_page_table.translate_page(page);
+    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
+}
+
 /// Create a FrameAllocator from the passed memory map
 pub fn init_frame_allocator(
     memory_map: &'static MemoryMap,
@@ -57,67 +86,4 @@ pub fn init_frame_allocator(
     });
 
     BootInfoFrameAllocator { frames }
-}
-
-// creates a sample mapping.
-// Mutiple reference to Recursive page table because needs to modify entries
-pub fn create_example_mapping(
-    recursive_page_table: &mut RecursivePageTable,
-    // The Size4KiB argument in the trait implementation is needed because the Page and PhysFrame
-    // types are generic over the PageSize trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) {
-    use x86_64::structures::paging::PageTableFlags as Flags;
-
-    // Bootloader occupies first MB of virtual memory, so know level 1 page table
-    // is valid for this reasons. So can use page at 0x1000.
-//    let page: Page = Page::containing_address(VirtAddr::new(0x1000));
-
-    // Uses frame allocator to allocate new frame to store page tables and new page
-    let page: Page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
-
-    // The target frame will be 0xb8000, the VGA buffer's frame for easy mapping testing.
-    let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
-    // Present flag required for all valid page table entries
-    let flags = Flags::PRESENT | Flags::WRITABLE;
-
-    let map_to_result = unsafe {
-        // map_to from Mapper trait to map page at address 0x1000 to physical frame
-        // at 0xb8000. Unsafe because possible to break memory safety with invalid arguments.
-        // frame_allocator must implement FrameAllocator trait.The map_to method needs this argument
-        // because it might need unused frames for creating new page tables.
-        recursive_page_table.map_to(page, frame, flags, frame_allocator)
-    };
-    // Sample code so use expect to panic in case of error.
-    // Return MapperFlush type provides easy way to flush newly mapped page from TLB
-    map_to_result.expect("map_to failed").flush();
-}
-
-// Creates a RecursivePageTable instance from the level 4 address.
-// Unsafe because it can break memory safety if an invalid address is passed.
-pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
-    /// Rust currently treats the whole body of unsafe functions as an unsafe
-    /// block, which makes it difficult to see which operations are unsafe. To
-    /// limit the scope of unsafe we use a safe inner function.
-    /// RFC: https://github.com/rust-lang/rfcs/pull/2585
-    fn init_inner(level_4_table_addr: usize) -> RecursivePageTable<'static> {
-        let level_4_table_ptr = level_4_table_addr as *mut PageTable;
-        let level_4_table = unsafe { &mut *level_4_table_ptr };
-        RecursivePageTable::new(level_4_table).unwrap()
-    }
-
-    init_inner(level_4_table_addr)
-}
-
-/// Returns the physical address for the given virtual address, or `None` if
-/// the virtual address is not mapped.
-pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
-                      -> Option<PhysAddr>
-{
-    let addr = VirtAddr::new(addr);
-    let page: Page = Page::containing_address(addr);
-
-    // perform the translation
-    let frame = recursive_page_table.translate_page(page);
-    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 }
