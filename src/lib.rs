@@ -14,8 +14,6 @@ extern crate spin;
 extern crate uart_16550;    // as serial interface for port mapped I/O
 extern crate x86_64;
 extern crate pic8259_simple;
-
-#[macro_use]
 extern crate alloc;
 
 // Unit tests run on host machine, therefore std lib available
@@ -26,6 +24,7 @@ extern crate array_init;
 
 #[macro_use]
 pub mod vga_buffer;
+#[macro_use]
 pub mod serial;
 pub mod gdt;
 pub mod interrupts;
@@ -54,7 +53,7 @@ pub unsafe fn exit_qemu() {
 use memory::heap::HeapAllocator;
 
 #[global_allocator]
-static HEAP_ALLOCATOR: HeapAllocator = HeapAllocator::new();
+pub static HEAP_ALLOCATOR: HeapAllocator = HeapAllocator::new();
 
 #[alloc_error_handler]
 pub fn rust_oom(info: core::alloc::Layout) -> ! {

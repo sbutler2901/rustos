@@ -10,13 +10,13 @@
 extern crate rust_os;
 extern crate x86_64;
 extern crate bootloader;
-#[macro_use]
 extern crate alloc;
 
 use core::panic::PanicInfo;
 use rust_os::{gdt, interrupts, memory};
 use bootloader::{bootinfo::BootInfo, entry_point};
 use alloc::vec::Vec;
+use core::alloc::GlobalAlloc;
 
 entry_point!(kernel_main);
 
@@ -40,11 +40,23 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         serial_println!("{:?} {:?}", region.region_type, region.range);
     }
 
-    let test: Vec<i32> = vec![0,1,2];
+    let layout = core::alloc::Layout::new::<u32>();
 
-    for item in test {
-        println!("{:?}", item);
+    let test0 = unsafe { rust_os::HEAP_ALLOCATOR.alloc(layout) };
+    serial_println!("main test0: {:?}", test0);
+
+    let test1 = unsafe { rust_os::HEAP_ALLOCATOR.alloc(layout) };
+    serial_println!("main test1: {:?}", test1);
+
+    unsafe { rust_os::HEAP_ALLOCATOR.dealloc(test0, layout)}
+    unsafe { rust_os::HEAP_ALLOCATOR.dealloc(test1, layout)}
+
+    let mut test: Vec<u64> = Vec::new();
+
+    for item in 0..1 {
+        test.push(item);
     }
+
 
     println!("It did not crash!");
     rust_os::hlt_loop();

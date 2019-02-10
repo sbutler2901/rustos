@@ -73,9 +73,13 @@ unsafe impl Alloc for BitmapAllocator {
     }
 
     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
-        let ptr_addr: usize = (VirtAddr::from_ptr(ptr.as_ptr()).as_u64() - self.block.start_addr) as usize;
-        let start_index = ptr_addr / self.block.block_size;
-        let end_index = layout.size() / self.block.block_size + start_index;
+        let ptr_start_addr = VirtAddr::from_ptr(ptr.as_ptr()).as_u64() as usize;
+        let start_index: usize = (ptr_start_addr - self.block.start_addr as usize) / self.block.block_size;
+        let end_index: usize = (layout.size() / self.block.block_size) + start_index;
+
+        serial_println!("ptr_start_addr: {:?}", ptr_start_addr);
+        serial_println!("start_index: {:?}", start_index);
+        serial_println!("end_index: {:?}", end_index);
 
         for index in start_index..=end_index {
             self.block.bitmap[index] = false;
