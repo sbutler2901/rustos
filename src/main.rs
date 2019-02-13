@@ -41,8 +41,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     let mut test: Vec<u64> = Vec::new();
 
-    for item in 0..1 {
+    for item in 0..1000 {
         test.push(item);
+        println!("index: {:?}", item);
     }
 
 

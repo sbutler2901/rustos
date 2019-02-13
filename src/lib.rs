@@ -2,7 +2,8 @@
     abi_x86_interrupt,
     alloc,
     allocator_api,
-    alloc_error_handler
+    alloc_error_handler,
+    const_fn,
 )]  // enable usage of unstable x86-interrupt calling convention
 #![no_std]
 
