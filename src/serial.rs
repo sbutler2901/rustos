@@ -5,7 +5,7 @@ use spin::Mutex;
 lazy_static! {
     pub static ref SERIAL1: Mutex<SerialPort> = {
         // standard port address for first serial interface: 0x3F8
-        let mut serial_port = SerialPort::new(0x3F8);
+        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
         serial_port.init();
         Mutex::new(serial_port)
     };

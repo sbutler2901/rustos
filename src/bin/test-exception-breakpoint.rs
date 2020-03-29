@@ -12,7 +12,7 @@ extern crate lazy_static;
 use rust_os::{exit_qemu, hlt_loop};
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
+use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
 
 // can safely concurrently modifies because of its all operations are atomic
 // used to verify breakpoint_handler is only called once
@@ -29,7 +29,7 @@ lazy_static! {
     };
 }
 
-extern "x86-interrupt" fn breakpoint_handler(_stack_frame: &mut ExceptionStackFrame) {
+extern "x86-interrupt" fn breakpoint_handler(_stack_frame: &mut InterruptStackFrame) {
     // Ordering parameter specifies desired guarantees of the atomic operations
     // SeqCst: "sequential consistent" -> gives strongest guarantees
     BREAKPOINT_HANDLER_CALLED.fetch_add(1, Ordering::SeqCst);
@@ -43,7 +43,7 @@ pub extern "C" fn _start() -> ! {
     init_idt();
 
     // invoke a breakpoint exception
-    x86_64::instructions::int3();
+    x86_64::instructions::interrupts::int3();
 
     match BREAKPOINT_HANDLER_CALLED.load(Ordering::SeqCst) {
         1 => serial_println!("ok"),

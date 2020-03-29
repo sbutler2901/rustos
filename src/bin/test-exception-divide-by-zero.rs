@@ -12,21 +12,21 @@ extern crate lazy_static;
 
 use rust_os::{exit_qemu, hlt_loop};
 use core::panic::PanicInfo;
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
+use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
 
 pub fn init_idt() { IDT.load(); }
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
-        idt.divide_by_zero.set_handler_fn(divide_by_zero_handler);
+        idt.divide_error.set_handler_fn(divide_error_handler);
 
         idt
     };
 }
 
-extern "x86-interrupt" fn divide_by_zero_handler(
-    _stack_frame: &mut ExceptionStackFrame
+extern "x86-interrupt" fn divide_error_handler(
+    _stack_frame: &mut InterruptStackFrame
 ) {
     serial_println!("ok");
 

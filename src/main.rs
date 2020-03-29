@@ -33,7 +33,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // enables external interrupts
 
-    let mut recursive_page_table: RecursivePageTable = unsafe { init(boot_info.p4_table_addr as usize) };
+    let mut recursive_page_table: RecursivePageTable = unsafe { init(boot_info.recursive_page_table_addr as usize) };
     let mut frame_allocator = init_frame_allocator(&boot_info.memory_map);
 
     for region in boot_info.memory_map.iter() {

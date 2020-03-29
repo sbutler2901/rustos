@@ -1,6 +1,6 @@
 use pic8259_simple::ChainedPics;
 use spin::Mutex;
-use x86_64::structures::idt::{InterruptDescriptorTable, PageFaultErrorCode, ExceptionStackFrame };
+use x86_64::structures::idt::{InterruptDescriptorTable, PageFaultErrorCode, InterruptStackFrame };
 
 pub const PIC_1_OFFSET: u8 = 32;    // offset interrupts to 32 (where CPU exceptions end)
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;  // start secondary PIC exceptions after 8 for first
@@ -25,7 +25,7 @@ lazy_static! {
 
         let mut idt = InterruptDescriptorTable::new();
 
-        idt.divide_by_zero.set_handler_fn(divide_by_zero_handler);
+        idt.divide_error.set_handler_fn(divide_error_handler);
         idt.debug.set_handler_fn(debug_handler);
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt.non_maskable_interrupt.set_handler_fn(non_maskable_interrupt_handler);
@@ -76,8 +76,8 @@ lazy_static! {
 // Aborts: Some severe unrecoverable error.
 
 /// Fault: occurs when dividing any number by 0
-extern "x86-interrupt" fn divide_by_zero_handler(
-    stack_frame: &mut ExceptionStackFrame
+extern "x86-interrupt" fn divide_error_handler(
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -87,7 +87,7 @@ extern "x86-interrupt" fn divide_by_zero_handler(
 
 /// Fault/Trip: debug exceptions
 extern "x86-interrupt" fn debug_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -97,14 +97,14 @@ extern "x86-interrupt" fn debug_handler(
 
 /// Trap: Handler for breakpoint exception
 extern "x86-interrupt" fn breakpoint_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
 
 /// Interrupt: Handler for non maskable interrupts
 extern "x86-interrupt" fn non_maskable_interrupt_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -114,7 +114,7 @@ extern "x86-interrupt" fn non_maskable_interrupt_handler(
 
 /// Trip: Handler for
 extern "x86-interrupt" fn overflow_interrupt_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -124,7 +124,7 @@ extern "x86-interrupt" fn overflow_interrupt_handler(
 
 /// Fault: handles bound range exceeded exception
 extern "x86-interrupt" fn bound_range_exceeded_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -134,7 +134,7 @@ extern "x86-interrupt" fn bound_range_exceeded_handler(
 
 /// Fault: handles invalid opcode exception
 extern "x86-interrupt" fn invalid_opcode_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -144,7 +144,7 @@ extern "x86-interrupt" fn invalid_opcode_handler(
 
 /// Fault: handles device not available exception
 extern "x86-interrupt" fn device_not_available_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -158,8 +158,8 @@ extern "x86-interrupt" fn device_not_available_handler(
 /// About: Handler for double fault exception
 extern "x86-interrupt" fn double_fault_handler(
     // error_code by definition always 0
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
-) {
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
+) -> ! {
     use hlt_loop;
 
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
@@ -168,7 +168,7 @@ extern "x86-interrupt" fn double_fault_handler(
 
 /// Fault: handles invalid tss exception
 extern "x86-interrupt" fn invalid_tss_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
     use hlt_loop;
 
@@ -178,7 +178,7 @@ extern "x86-interrupt" fn invalid_tss_handler(
 
 /// Fault: handles segment not present exception
 extern "x86-interrupt" fn segment_not_present_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
     use hlt_loop;
 
@@ -188,7 +188,7 @@ extern "x86-interrupt" fn segment_not_present_handler(
 
 /// Fault: handles stack segment fault exception
 extern "x86-interrupt" fn stack_segment_fault_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
     use hlt_loop;
 
@@ -198,7 +198,7 @@ extern "x86-interrupt" fn stack_segment_fault_handler(
 
 /// Fault: general exception errors
 extern "x86-interrupt" fn general_protection_fault_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
     use hlt_loop;
 //    println!("Error code: {}", error_code);
@@ -208,7 +208,7 @@ extern "x86-interrupt" fn general_protection_fault_handler(
 
 /// Fault: Handler for page fault exception
 extern "x86-interrupt" fn page_fault_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: PageFaultErrorCode
+    stack_frame: &mut InterruptStackFrame, _error_code: PageFaultErrorCode
 ) {
     use hlt_loop;
     // automatically set on page fault to accessed virtual address that caused page fault
@@ -223,7 +223,7 @@ extern "x86-interrupt" fn page_fault_handler(
 
 /// Fault: Handler for x87 floating point exception
 extern "x86-interrupt" fn x87_floating_point_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -233,7 +233,7 @@ extern "x86-interrupt" fn x87_floating_point_handler(
 
 /// Fault: Handler for alignment check exception
 extern "x86-interrupt" fn alignment_check_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
     use hlt_loop;
 
@@ -243,8 +243,8 @@ extern "x86-interrupt" fn alignment_check_handler(
 
 /// Abort: Handler for machine check exception
 extern "x86-interrupt" fn machine_check_handler(
-    stack_frame: &mut ExceptionStackFrame
-) {
+    stack_frame: &mut InterruptStackFrame
+) -> ! {
     use hlt_loop;
 
     println!("EXCEPTION: MACHINE CHECK\n{:#?}", stack_frame);
@@ -253,7 +253,7 @@ extern "x86-interrupt" fn machine_check_handler(
 
 /// Fault: Handler for simd floating point exception
 extern "x86-interrupt" fn simd_floating_point_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -263,7 +263,7 @@ extern "x86-interrupt" fn simd_floating_point_handler(
 
 /// Fault: Handler virtualization exception
 extern "x86-interrupt" fn virtualization_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     use hlt_loop;
 
@@ -273,7 +273,7 @@ extern "x86-interrupt" fn virtualization_handler(
 
 /// Fault: Handler security exception
 extern "x86-interrupt" fn security_exception_handler(
-    stack_frame: &mut ExceptionStackFrame, _error_code: u64
+    stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
     use hlt_loop;
 
@@ -285,7 +285,7 @@ extern "x86-interrupt" fn security_exception_handler(
 
 /// Handler to timer interrupts
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame
+    _stack_frame: &mut InterruptStackFrame
 ) {
 //    print!(".");
     // PIC waits for EOI signal notifying ready for next interrupt
@@ -296,12 +296,12 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 /// Handler for keyboard interrupts
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame
+    _stack_frame: &mut InterruptStackFrame
 ) {
     use x86_64::instructions::port::Port;
     use keyboard;
 
-    let port = Port::new(0x60);
+    let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
     let key = keyboard::scancode_map(scancode);
 
@@ -319,7 +319,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 /// Fault: sys call interrupt
 extern "x86-interrupt" fn sys_call_interrupt_handler(
-    stack_frame: &mut ExceptionStackFrame
+    stack_frame: &mut InterruptStackFrame
 ) {
     println!("EXCEPTION: SYS CALL\n{:#?}", stack_frame);
 }

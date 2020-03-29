@@ -12,7 +12,7 @@ extern crate lazy_static;
 
 use rust_os::{exit_qemu, hlt_loop};
 use core::panic::PanicInfo;
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
+use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
 
 pub const SYS_CALL_ID: u8 = 0x80;       // base 10: 128
 
@@ -29,7 +29,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn sys_call_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame
+    _stack_frame: &mut InterruptStackFrame
 ) {
     serial_println!("ok");
 

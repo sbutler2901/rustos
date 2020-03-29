@@ -4,25 +4,25 @@ use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 /// A FrameAllocator that always returns `None`.
 pub struct EmptyFrameAllocator;
 
-impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame> {
         None
     }
 }
 
 /// A FrameAllocator that returns the next available free frame
 pub struct BootInfoFrameAllocator<I>
-    where I: Iterator<Item = PhysFrame>
+    where I: Iterator<Item = UnusedPhysFrame>
 {
     // can be initialized with an arbitrary Iterator of frames.
     // This allows us to just delegate alloc calls to the Iterator::next method.
     frames: I,
 }
 
-impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
-    where I: Iterator<Item = PhysFrame>
+unsafe impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
+    where I: Iterator<Item = UnusedPhysFrame>
 {
-    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame> {
         self.frames.next()
     }
 }
@@ -30,7 +30,7 @@ impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
 /// Create a FrameAllocator from the passed memory map
 pub fn init_frame_allocator(
     memory_map: &'static MemoryMap,
-) -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>> {
+) -> BootInfoFrameAllocator<impl Iterator<Item = UnusedPhysFrame>> {
     // get usable regions from memory map
     let regions = memory_map
         // convert the memory map to an iterator of MemoryRegions
@@ -56,7 +56,9 @@ pub fn init_frame_allocator(
         PhysFrame::containing_address(PhysAddr::new(addr))
     });
 
-    BootInfoFrameAllocator { frames }
+    let unused_frames = frames.map(|f| unsafe { UnusedPhysFrame::new(f) });
+
+    BootInfoFrameAllocator { frames: unused_frames }
 }
 
 // creates a sample mapping.
@@ -78,6 +80,9 @@ pub fn create_example_mapping(
 
     // The target frame will be 0xb8000, the VGA buffer's frame for easy mapping testing.
     let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
+
+    let unused_frame = unsafe { UnusedPhysFrame::new(frame) };
+
     // Present flag required for all valid page table entries
     let flags = Flags::PRESENT | Flags::WRITABLE;
 
@@ -86,7 +91,7 @@ pub fn create_example_mapping(
         // at 0xb8000. Unsafe because possible to break memory safety with invalid arguments.
         // frame_allocator must implement FrameAllocator trait.The map_to method needs this argument
         // because it might need unused frames for creating new page tables.
-        recursive_page_table.map_to(page, frame, flags, frame_allocator)
+        recursive_page_table.map_to(page, unused_frame, flags, frame_allocator)
     };
     // Sample code so use expect to panic in case of error.
     // Return MapperFlush type provides easy way to flush newly mapped page from TLB
@@ -118,6 +123,7 @@ pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
     let page: Page = Page::containing_address(addr);
 
     // perform the translation
-    let frame = recursive_page_table.translate_page(page);
-    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
+    let _frame = recursive_page_table.translate_page(page);
+//    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
+    Some(PhysAddr::new(0))
 }

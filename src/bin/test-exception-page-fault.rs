@@ -12,7 +12,7 @@ extern crate lazy_static;
 
 use rust_os::{exit_qemu, hlt_loop};
 use core::panic::PanicInfo;
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable, PageFaultErrorCode};
+use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable, PageFaultErrorCode};
 
 pub fn init_idt() { IDT.load(); }
 
@@ -27,7 +27,7 @@ lazy_static! {
 
 extern "x86-interrupt" fn page_fault_handler(
     // error_code by definition always 0
-    _stack_frame: &mut ExceptionStackFrame, _error_code: PageFaultErrorCode
+    _stack_frame: &mut InterruptStackFrame, _error_code: PageFaultErrorCode
 ) {
     serial_println!("ok");
 
