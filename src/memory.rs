@@ -86,13 +86,13 @@ pub fn create_example_mapping(
     // Present flag required for all valid page table entries
     let flags = Flags::PRESENT | Flags::WRITABLE;
 
-    let map_to_result = unsafe {
-        // map_to from Mapper trait to map page at address 0x1000 to physical frame
-        // at 0xb8000. Unsafe because possible to break memory safety with invalid arguments.
-        // frame_allocator must implement FrameAllocator trait.The map_to method needs this argument
-        // because it might need unused frames for creating new page tables.
-        recursive_page_table.map_to(page, unused_frame, flags, frame_allocator)
-    };
+    // map_to from Mapper trait to map page at address 0x1000 to physical frame
+    // at 0xb8000. Unsafe because possible to break memory safety with invalid arguments.
+    // frame_allocator must implement FrameAllocator trait.The map_to method needs this argument
+    // because it might need unused frames for creating new page tables.
+    let map_to_result =
+        recursive_page_table.map_to(page, unused_frame, flags, frame_allocator);
+
     // Sample code so use expect to panic in case of error.
     // Return MapperFlush type provides easy way to flush newly mapped page from TLB
     map_to_result.expect("map_to failed").flush();
