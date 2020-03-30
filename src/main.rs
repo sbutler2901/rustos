@@ -21,7 +21,7 @@ entry_point!(kernel_main);
 #[cfg(not(test))] // only compile when test flag is not set
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use rust_os::memory;
-    use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
+    use x86_64::{structures::paging::Page, VirtAddr};
 
     println!("Hello World{}", "!");
     serial_println!("Hello Host{}", "!");
@@ -29,46 +29,19 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     rust_os::init();
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator = memory::EmptyFrameAllocator;
 
-    // initialize and OffsetPageTable that acts as a mapper
-    let mapper = unsafe { memory::init(phys_mem_offset) };
+    // map an unused page
+    // Page 0 is usual always left empty so that de-referencing a null pointer
+    // will always cause a page fault. This page is also already has all necessary page tables
+    // pre-allocated, so the frame_allocator and be a dummy implementation
+    let page = Page::containing_address(VirtAddr::new(0));
+    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
 
-    let addresses = [
-        // the identity-mapped vga buffer page
-        0xb8000,
-        // some code page
-        0x201008,
-        // some stack page
-        0x0100_0020_1a10,
-        // virtual address mapped to physical address 0
-        boot_info.physical_memory_offset,
-    ];
-
-    for &address in &addresses {
-        let virt = VirtAddr::new(address);
-        let phys = mapper.translate_addr(virt);
-        println!("{:?} -> {:?}", virt, phys);
-    }
-//    let mut recursive_page_table: RecursivePageTable = unsafe { init(boot_info.recursive_page_table_addr as usize) };
-//    let mut frame_allocator = init_frame_allocator(&boot_info.memory_map);
-
-//    for region in boot_info.memory_map.iter() {
-//        serial_println!("{:?} {:?}", region.region_type, region.range);
-//    }
-
-    // create mapping at 0x1000
-//    create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
-
-    // Write string New! to VGA buffer. Offsets by 900 since vga buffer pushes
-    // top line off screen on next println
-    // Only works because know level 1 page table is already mapped and don't need frame allocator
-//    unsafe { (0x1900 as *mut u64).write_volatile(0xf021f077f065f04e)};
-
-    // Writes to vga buffer with page mapped by frame allocator
-//    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
-
-    // This address is identity mapped for VGA and so the translation doesn't change the address
-//    println!("0xb8000 -> {:?}", translate_addr(0xb8000, &recursive_page_table));
+    // write the string `New!` to the screen through the new mapping
+    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e)};
 
     println!("It did not crash!");
     rust_os::hlt_loop();
