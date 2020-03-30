@@ -24,6 +24,16 @@ pub mod interrupts;
 pub mod keyboard;
 pub mod memory;
 
+pub fn init() {
+    gdt::init(); // load GDT
+    interrupts::init_idt(); // load IDT
+
+    // Initialize PICs for hardware interrupts
+    // unsafe: possible undefined behavior if PIC misconfigured
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable(); // enables external interrupts
+}
+
 // Notify the CPU to halt until the next interrupt arrives rather than
 // the expensive loop
 pub fn hlt_loop() -> ! {
