@@ -20,8 +20,8 @@ entry_point!(kernel_main);
 // The function expected in linker for the start of the program
 #[cfg(not(test))] // only compile when test flag is not set
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    use rust_os::memory::translate_addr;
-    use x86_64::VirtAddr;
+    use rust_os::memory;
+    use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
 
     println!("Hello World{}", "!");
     serial_println!("Hello Host{}", "!");
@@ -29,6 +29,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     rust_os::init();
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+
+    // initialize and OffsetPageTable that acts as a mapper
+    let mapper = unsafe { memory::init(phys_mem_offset) };
 
     let addresses = [
         // the identity-mapped vga buffer page
@@ -43,10 +46,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     for &address in &addresses {
         let virt = VirtAddr::new(address);
-        let phys = unsafe { translate_addr(virt, phys_mem_offset) };
+        let phys = mapper.translate_addr(virt);
         println!("{:?} -> {:?}", virt, phys);
     }
-
 //    let mut recursive_page_table: RecursivePageTable = unsafe { init(boot_info.recursive_page_table_addr as usize) };
 //    let mut frame_allocator = init_frame_allocator(&boot_info.memory_map);
 
