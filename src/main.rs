@@ -1,19 +1,17 @@
 #![no_std]  // dont linke Rust stdlib
 // only enable no_main macro in non-test mode
 // which prevents a main from being injected since this is a kernel
-#![cfg_attr(not(test), no_main)]
+// #![cfg_attr(not(test), no_main)]
 // silence certain warnings when testing is being performed
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
-#![feature(asm)]
+// #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(blog_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
-#[macro_use]
-extern crate rust_os;
-extern crate x86_64;
-extern crate bootloader;
-
+use rust_os::{println, serial_println};
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use bootloader::{bootinfo::BootInfo, entry_point};
-//use x86_64::structures::paging::RecursivePageTable;
 
 entry_point!(kernel_main);
 
