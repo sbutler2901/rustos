@@ -2,6 +2,7 @@
 name = "rust_os"
 version = "0.1.0"
 authors = ["Seth Butler <seth.butler@ibm.com>"]
+edition = "2018"
 
 [dependencies]
 bootloader = { version = "0.8.9", features = ["map_physical_memory"]}

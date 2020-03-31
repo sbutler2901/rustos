@@ -19,10 +19,7 @@ entry_point!(kernel_main);
 
 // The function expected in linker for the start of the program
 #[cfg(not(test))] // only compile when test flag is not set
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    use rust_os::memory;
-    use x86_64::{structures::paging::Page, VirtAddr};
-
+fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     println!("Hello World{}", "!");
     serial_println!("Hello Host{}", "!");
 
