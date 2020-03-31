@@ -29,3 +29,16 @@ panic = "abort" # disable stack unwinding on panic
 
 [package.metadata.bootimage]
 default-target = "x86_64-rust_os.json"  # sets default target for bootimage command
+test-args = [
+    # isa-debug-exit: qemu device allowing exiting from system
+    # iobase: port address for device (port mapped I/O)
+    # iosize: portsize: 0x04 == 4 bytes
+    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
+    # redirects test serial output to stdio
+    "-serial", "stdio",
+    # tells qemu not to create a display
+    "-display", "none"
+]
+# maps a specified exit code to the exit code 0
+test-success-exit-code = 33         # (0x10 << 1) | 1
+test-timeout = 300          # (in seconds)

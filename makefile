@@ -11,14 +11,14 @@ run:
 br:
 	bootimage build && bootimage run -- -serial mon:stdio -device isa-debug-exit,iobase=0xf4,iosize=0x04
 
-brnodisplay:	
+brnodisplay:
 	bootimage build && bootimage run -- -serial mon:stdio -device isa-debug-exit,iobase=0xf4,iosize=0x04 -display none
 
 testint:
 	bootimage test
 
 testunit:
-	cargo test
+	cargo xtest
 
 bootv2: $(BOOTBIN)
 	qemu-system-x86_64 -drive format=raw,file=$(BOOTBIN) -serial mon:stdio

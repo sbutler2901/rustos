@@ -1,8 +1,12 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
-#![feature(custom_test_frameworks)]
 #![feature(abi_x86_interrupt)]  // enable usage of unstable x86-interrupt calling convention
+// replacing the default test framework (since stdlib is not available)
+#![feature(custom_test_frameworks)]
+// use the test_runner function created in the rust_os lib
 #![test_runner(crate::test_runner)]
+// Change the custom test framework's generated main name
+// to prevent no_main from causing it to be ignored
 #![reexport_test_harness_main = "test_main"]
 
 #[macro_use]
@@ -52,6 +56,8 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     }
 }
 
+// Executes all functions annotated with: #[test_case]
+// and exits qemu
 pub fn test_runner(tests: &[&dyn Fn()]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
@@ -60,6 +66,7 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
     exit_qemu(QemuExitCode::Success);
 }
 
+// The panic handler to be used during testing
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
@@ -77,7 +84,7 @@ entry_point!(test_kernel_main);
 #[cfg(test)]
 fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
     init();
-    // test_main();
+    test_main();
     hlt_loop();
 }
 
