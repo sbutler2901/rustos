@@ -34,3 +34,10 @@ fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     rust_os::hlt_loop();
 }
+
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    rust_os::test_panic_handler(info)
+}

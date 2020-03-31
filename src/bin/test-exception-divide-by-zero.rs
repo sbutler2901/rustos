@@ -10,7 +10,7 @@ extern crate x86_64;
 #[macro_use]
 extern crate lazy_static;
 
-use rust_os::{exit_qemu, hlt_loop};
+use rust_os::{exit_qemu, hlt_loop, QemuExitCode};
 use core::panic::PanicInfo;
 use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
 
@@ -30,7 +30,7 @@ extern "x86-interrupt" fn divide_error_handler(
 ) {
     serial_println!("ok");
 
-    unsafe { exit_qemu(); }
+    exit_qemu(QemuExitCode::Success);
     hlt_loop();
 }
 
@@ -53,7 +53,7 @@ pub extern "C" fn _start() -> ! {
     serial_println!("failed");
     serial_println!("No exception occurred");
 
-    unsafe { exit_qemu(); }
+    exit_qemu(QemuExitCode::Success);
     hlt_loop();
 }
 
@@ -64,6 +64,6 @@ fn panic(info: &PanicInfo) -> ! {
     serial_println!("failed");
     serial_println!("{}", info);
 
-    unsafe { exit_qemu(); }
+    exit_qemu(QemuExitCode::Failed);
     hlt_loop();
 }

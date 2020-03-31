@@ -7,7 +7,7 @@
 extern crate rust_os;
 
 use core::panic::PanicInfo;
-use rust_os::{exit_qemu, hlt_loop};
+use rust_os::{exit_qemu, hlt_loop, QemuExitCode};
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
@@ -16,7 +16,7 @@ use rust_os::{exit_qemu, hlt_loop};
 pub extern "C" fn _start() -> ! {
     serial_println!("ok");
 
-    unsafe { exit_qemu(); }
+    exit_qemu(QemuExitCode::Success);
     hlt_loop();
 }
 
@@ -29,6 +29,6 @@ fn panic(info: &PanicInfo) -> ! {
 
     serial_println!("{}", info);
 
-    unsafe { exit_qemu(); }
+    exit_qemu(QemuExitCode::Failed);
     hlt_loop();
 }
