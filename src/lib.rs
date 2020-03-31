@@ -1,20 +1,9 @@
 #![no_std]
+#![cfg_attr(test, no_main)]
+#![feature(custom_test_frameworks)]
 #![feature(abi_x86_interrupt)]  // enable usage of unstable x86-interrupt calling convention
-
-#[macro_use]
-extern crate lazy_static;
-extern crate bootloader;
-extern crate volatile;
-extern crate spin;
-extern crate uart_16550;    // as serial interface for port mapped I/O
-extern crate x86_64;
-extern crate pic8259_simple;
-
-// Unit tests run on host machine, therefore std lib available
-#[cfg(test)]
-extern crate std;
-#[cfg(test)]
-extern crate array_init;
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 #[macro_use]
 pub mod vga_buffer;
@@ -23,6 +12,8 @@ pub mod gdt;
 pub mod interrupts;
 pub mod keyboard;
 pub mod memory;
+
+// use core::panic::PanicInfo;
 
 pub fn init() {
     gdt::init(); // load GDT
