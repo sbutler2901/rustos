@@ -1,8 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(custom_test_frameworks)]
-#![test_runner(rust_os::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)]
 
 use rust_os::{serial_println, exit_qemu, QemuExitCode, hlt_loop};
@@ -37,14 +34,6 @@ extern "x86-interrupt" fn breakpoint_handler(_stack_frame: &mut InterruptStackFr
 pub extern "C" fn _start() -> ! {
     init_idt();
 
-    test_main();
-
-    exit_qemu(QemuExitCode::Success);
-    hlt_loop();
-}
-
-#[test_case]
-fn test_exception_breakpoint() {
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
 
@@ -59,6 +48,9 @@ fn test_exception_breakpoint() {
             serial_println!("Breakpoint handler was called {} times", other);
         }
     }
+
+    exit_qemu(QemuExitCode::Success);
+    hlt_loop();
 }
 
 /// This function is called on panic.

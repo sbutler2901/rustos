@@ -1,29 +1,27 @@
 #![no_std]
 #![no_main]
-#![feature(custom_test_frameworks)]
-#![test_runner(rust_os::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
 
 use rust_os::{exit_qemu, hlt_loop, QemuExitCode, serial_println};
 use lazy_static::lazy_static;
 use core::panic::PanicInfo;
-use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
+use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable, PageFaultErrorCode};
 
 pub fn init_idt() { IDT.load(); }
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
-        idt.divide_error.set_handler_fn(divide_error_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
 
         idt
     };
 }
 
-extern "x86-interrupt" fn divide_error_handler(
-    _stack_frame: &mut InterruptStackFrame
+extern "x86-interrupt" fn page_fault_handler(
+    // error_code by definition always 0
+    _stack_frame: &mut InterruptStackFrame, _error_code: PageFaultErrorCode
 ) {
     serial_println!("ok");
 
@@ -38,12 +36,8 @@ pub extern "C" fn _start() -> ! {
     init_idt();
 
     unsafe {
-        asm!(r"
-            mov eax, 0x1
-            mov ecx, 0x0
-            div ecx"
-            :::: "intel"
-        );
+        asm!("movl $$0x0, %eax":::"eax");
+        asm!("movl $$0x1, (%eax)":::"eax")
     }
 
     serial_println!("failed");

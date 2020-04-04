@@ -43,7 +43,29 @@ test-args = [
 test-success-exit-code = 33         # (0x10 << 1) | 1
 test-timeout = 300          # (in seconds)
 
+# test without multiple #[test_case]'s can be ran without the test runner
+# and harness
 
 [[test]]
-name = "test-panic"
+name = "panic"
+harness = false
+
+[[test]]
+name = "exception-divide-by-zero"
+harness = false
+
+[[test]]
+name = "exception-double-fault-stack-overflow"
+harness = false
+
+[[test]]
+name = "exception-breakpoint"
+harness = false
+
+[[test]]
+name = "exception-page-fault"
+harness = false
+
+[[test]]
+name = "interrupt-syscall"
 harness = false
