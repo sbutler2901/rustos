@@ -1,3 +1,5 @@
+use crate::{gdt, hlt_loop, print, println, keyboard};
+use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, PageFaultErrorCode, InterruptStackFrame };
@@ -79,18 +81,14 @@ lazy_static! {
 extern "x86-interrupt" fn divide_error_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
-    hlt_loop();
+    hlt_loop()
 }
 
 /// Fault/Trip: debug exceptions
 extern "x86-interrupt" fn debug_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: DEBUG\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -106,8 +104,6 @@ extern "x86-interrupt" fn breakpoint_handler(
 extern "x86-interrupt" fn non_maskable_interrupt_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: NON-MASKABLE\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -116,8 +112,6 @@ extern "x86-interrupt" fn non_maskable_interrupt_handler(
 extern "x86-interrupt" fn overflow_interrupt_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: OVERFLOW\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -126,8 +120,6 @@ extern "x86-interrupt" fn overflow_interrupt_handler(
 extern "x86-interrupt" fn bound_range_exceeded_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: BOUND RANGE EXCEEDED\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -136,8 +128,6 @@ extern "x86-interrupt" fn bound_range_exceeded_handler(
 extern "x86-interrupt" fn invalid_opcode_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: INVALID OPCODE\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -146,8 +136,6 @@ extern "x86-interrupt" fn invalid_opcode_handler(
 extern "x86-interrupt" fn device_not_available_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: DEVICE NOT AVAILABLE\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -160,18 +148,14 @@ extern "x86-interrupt" fn double_fault_handler(
     // error_code by definition always 0
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) -> ! {
-    use hlt_loop;
-
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
-    hlt_loop();
+    hlt_loop()
 }
 
 /// Fault: handles invalid tss exception
 extern "x86-interrupt" fn invalid_tss_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: INVALID TSS\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -180,8 +164,6 @@ extern "x86-interrupt" fn invalid_tss_handler(
 extern "x86-interrupt" fn segment_not_present_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: SEGMENT NOT PRESENT\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -190,8 +172,6 @@ extern "x86-interrupt" fn segment_not_present_handler(
 extern "x86-interrupt" fn stack_segment_fault_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: STACK SEGMENT FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -200,8 +180,6 @@ extern "x86-interrupt" fn stack_segment_fault_handler(
 extern "x86-interrupt" fn general_protection_fault_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
-    use hlt_loop;
-//    println!("Error code: {}", error_code);
     println!("EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -210,7 +188,6 @@ extern "x86-interrupt" fn general_protection_fault_handler(
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: PageFaultErrorCode
 ) {
-    use hlt_loop;
     // automatically set on page fault to accessed virtual address that caused page fault
     use x86_64::registers::control::Cr2;
 
@@ -225,8 +202,6 @@ extern "x86-interrupt" fn page_fault_handler(
 extern "x86-interrupt" fn x87_floating_point_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: X87 FLOATING POINT\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -235,8 +210,6 @@ extern "x86-interrupt" fn x87_floating_point_handler(
 extern "x86-interrupt" fn alignment_check_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: ALIGNMENT CHECK\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -245,8 +218,6 @@ extern "x86-interrupt" fn alignment_check_handler(
 extern "x86-interrupt" fn machine_check_handler(
     stack_frame: &mut InterruptStackFrame
 ) -> ! {
-    use hlt_loop;
-
     println!("EXCEPTION: MACHINE CHECK\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -255,8 +226,6 @@ extern "x86-interrupt" fn machine_check_handler(
 extern "x86-interrupt" fn simd_floating_point_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: SIMD FLOATING POINT\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -265,8 +234,6 @@ extern "x86-interrupt" fn simd_floating_point_handler(
 extern "x86-interrupt" fn virtualization_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: VIRTUALIZATION\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -275,8 +242,6 @@ extern "x86-interrupt" fn virtualization_handler(
 extern "x86-interrupt" fn security_exception_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) {
-    use hlt_loop;
-
     println!("EXCEPTION: SECURITY EXCEPTION\n{:#?}", stack_frame);
     hlt_loop();
 }
@@ -299,7 +264,6 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut InterruptStackFrame
 ) {
     use x86_64::instructions::port::Port;
-    use keyboard;
 
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };

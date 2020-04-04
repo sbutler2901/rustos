@@ -1,4 +1,5 @@
 use core::fmt;
+use lazy_static::lazy_static;
 use volatile::Volatile;
 use spin::Mutex;
 
@@ -150,115 +151,69 @@ lazy_static! {
     });
 }
 
-// Defines the print! macro
+/// Like the `print!` macro in the standard library, but prints to the VGA text buffer.
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga_buffer::print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
 }
 
-// Defines the println! macro
+/// Like the `println!` macro in the standard library, but prints to the VGA text buffer.
 #[macro_export]
 macro_rules! println {
-    () => (print!("\n"));
-    ($fmt:expr) => (print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
-pub fn print(args: fmt::Arguments) {
-    use core::fmt::Write;       // imports write_fmt method from the Write trait
-    WRITER.lock().write_fmt(args).unwrap();
+/// Prints the given formatted string to the VGA text buffer
+/// through the global `WRITER` instance.
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    use x86_64::instructions::interrupts;
+
+    interrupts::without_interrupts(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    });
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;       // import all items of parent module: vga_buffer
+use crate::{serial_print, serial_println};
 
-    // Specifies what char represents an empty cell in VGA buffer during testing
-    fn empty_char() -> ScreenChar {
-        ScreenChar {
-            ascii_character: b' ',
-            color_code: ColorCode::new(Color::Green, Color::Brown),
-        }
+// Verify println! works. Success if no panic occurs
+#[test_case]
+fn test_println_simple() {
+    serial_print!("test_println... ");
+    println!("test_println_simple output");
+    serial_println!("[ok]");
+}
+
+// Verify no panic occurs when printing many lines
+// that shift off the screen
+#[test_case]
+fn test_println_many() {
+    serial_print!("test_println_many... ");
+    for _ in 0..200 {
+        println!("test_println_many output");
+    }
+    serial_println!("[ok]");
+}
+
+// Verify printed lines really appears on the screen
+#[test_case]
+fn test_println_output() {
+    serial_print!("test_println_output... ");
+
+    let s = "Some test string that fits on a single line";
+    println!("{}", s);
+
+    // Iterates VGA Buffer (Writer) chars to ensure printed
+    // enumerate() counts number of iterations in variable `i`
+    // to get column of char from buffer
+    for (i, c) in s.chars().enumerate() {
+        // -2 because of newline and 0th row
+        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(screen_char.ascii_character), c);
     }
 
-    fn construct_buffer() -> Buffer {
-        // bypasses array construction requiring that contained type is Copy
-        // ScreenChar satisfies this, but the Volatile wrapper does not
-        use array_init::array_init;
-
-        Buffer {
-            // Provides array initialization without non-Copy types.
-            // parameter of array_init is a closure. The single parameter to the closure is unused and therefore unimportant
-            // otherwise it could be used to perform calculations on value before creating the array.
-            // array_init utilizes type's size to create the required number of indices. In this case
-            // the number of columns and rows are defined in the Buffer struct
-            // "The width & height are deduced by type inference"
-            chars: array_init(|_| array_init(|_| Volatile::new(empty_char()))),
-        }
-    }
-
-    fn construct_writer() -> Writer {
-        use std::boxed::Box;
-
-        let buffer = construct_buffer();
-        Writer {
-            column_position: 0,
-            color_code: ColorCode::new(Color::Blue, Color::Magenta),
-            // transforms the created buffer into a &'static mut to satisfy buffer property's type
-            buffer: Box::leak(Box::new(buffer)),
-        }
-    }
-
-    #[test]             // tells test framework this is a test function
-    fn write_byte() {
-        let mut writer = construct_writer();
-        writer.write_byte(b'X');
-        writer.write_byte(b'Y');
-
-        for (i, row) in writer.buffer.chars.iter().enumerate() {
-            for (j, screen_char) in row.iter().enumerate() {
-                let screen_char = screen_char.read();
-                if i == BUFFER_HEIGHT - 1 && j == 0 {
-                    assert_eq!(screen_char.ascii_character, b'X');
-                    assert_eq!(screen_char.color_code, writer.color_code);
-
-                } else if i == BUFFER_HEIGHT - 1 && j == 1 {
-                    assert_eq!(screen_char.ascii_character, b'Y');
-                    assert_eq!(screen_char.color_code, writer.color_code);
-                } else {
-                    assert_eq!(screen_char, empty_char());
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn write_formatted() {
-        use core::fmt::Write;
-
-        let mut writer = construct_writer();
-        writeln!(&mut writer, "a").unwrap();
-        writeln!(&mut writer, "b{}", "c").unwrap();
-
-        for (i, row) in writer.buffer.chars.iter().enumerate() {
-            for (j, screen_char) in row.iter().enumerate() {
-                let screen_char = screen_char.read();
-                if i == BUFFER_HEIGHT - 3 && j == 0 {
-                    assert_eq!(screen_char.ascii_character, b'a');
-                    assert_eq!(screen_char.color_code, writer.color_code);
-                } else if i == BUFFER_HEIGHT - 2 && j == 0 {
-                    assert_eq!(screen_char.ascii_character, b'b');
-                    assert_eq!(screen_char.color_code, writer.color_code);
-                } else if i == BUFFER_HEIGHT - 2 && j == 1 {
-                    assert_eq!(screen_char.ascii_character, b'c');
-                    assert_eq!(screen_char.color_code, writer.color_code);
-                } else if i >= BUFFER_HEIGHT - 2 {              // ensures empty lines are shifted in on a new line and have correct color code
-                    assert_eq!(screen_char.ascii_character, b' ');
-                    assert_eq!(screen_char.color_code, writer.color_code);
-                } else {
-                    assert_eq!(screen_char, empty_char());
-                }
-            }
-        }
-    }
+    serial_println!("[ok]");
 }

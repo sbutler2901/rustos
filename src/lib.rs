@@ -1,23 +1,16 @@
 #![no_std]
+#![cfg_attr(test, no_main)]
 #![feature(abi_x86_interrupt)]  // enable usage of unstable x86-interrupt calling convention
 #![feature(alloc_error_handler)]
+// replacing the default test framework (since stdlib is not available)
+#![feature(custom_test_frameworks)]
+// use the test_runner function created in the rust_os lib
+#![test_runner(crate::test_runner)]
+// Change the custom test framework's generated main name
+// to prevent no_main from causing it to be ignored
+#![reexport_test_harness_main = "test_main"]
 
-#[macro_use]
-extern crate lazy_static;
 extern crate bootloader;
-extern crate volatile;
-extern crate spin;
-extern crate uart_16550;    // as serial interface for port mapped I/O
-extern crate x86_64;
-extern crate pic8259_simple;
-extern crate alloc;
-
-// Unit tests run on host machine, therefore std lib available
-#[cfg(test)]
-extern crate std;
-#[cfg(test)]
-extern crate array_init;
-extern crate linked_list_allocator;
 
 #[macro_use]
 pub mod vga_buffer;
@@ -27,6 +20,8 @@ pub mod interrupts;
 pub mod keyboard;
 pub mod memory;
 pub mod allocator;
+
+use core::panic::PanicInfo;
 
 pub fn init() {
     gdt::init(); // load GDT
@@ -46,17 +41,66 @@ pub fn hlt_loop() -> ! {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+pub fn exit_qemu(exit_code: QemuExitCode) {
+    use x86_64::instructions::port::Port;
+
+    // unsafe: relies on fact that a special QEMU device is attached to the I/O port w/ address 0xf4
+    // Provides exiting qemu without a 'proper' shutdown
+    unsafe {
+        // port type defined as u32 due to qemu iosize option being set to 4B
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
+}
+
+// Executes all functions annotated with: #[test_case]
+// and exits qemu
+pub fn test_runner(tests: &[&dyn Fn()]) {
+    serial_println!("Running {} tests", tests.len());
+    for test in tests {
+        test();
+    }
+    exit_qemu(QemuExitCode::Success);
+}
+
+// The panic handler to be used during testing
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitCode::Failed);
+    hlt_loop();
+}
+
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
+use x86_64::instructions::port::Port;
+
+#[cfg(test)]
+entry_point!(test_kernel_main);
+
+/// Entry point for `cargo xtest`
+#[cfg(test)]
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
+    init();
+    test_main();
+    hlt_loop();
+}
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    test_panic_handler(info)
+}
+
 #[alloc_error_handler]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("allocation error: {:?}", layout)
 }
 
-// unsafe: relies on fact that a special QEMU device is attached to the I/O port w/ address 0xf4
-// Provides exiting qemu without a 'proper' shutdown
-pub unsafe fn exit_qemu() {
-    use x86_64::instructions::port::Port;
-
-    // port type defined as u32 due to qemu iosize option being set to 4B
-    let mut port = Port::<u32>::new(0xf4);
-    port.write(0);
-}
