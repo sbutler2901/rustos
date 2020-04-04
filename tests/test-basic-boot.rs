@@ -4,16 +4,15 @@
 #![test_runner(rust_os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use rust_os::{println, serial_print, serial_println, exit_qemu, QemuExitCode, hlt_loop};
 use core::panic::PanicInfo;
-use rust_os::{println, serial_print, serial_println};
 
-/// This function is the entry point, since the linker looks for a function
-/// named `_start` by default.
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     test_main();
-    loop {}
-}
+
+    exit_qemu(QemuExitCode::Success);
+    hlt_loop();}
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

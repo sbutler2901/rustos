@@ -1,15 +1,12 @@
-#![feature(abi_x86_interrupt)]
 #![no_std]
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(rust_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+#![feature(abi_x86_interrupt)]
 
-#[macro_use]
-extern crate rust_os;
-extern crate x86_64;
-#[macro_use]
-extern crate lazy_static;
-
-use rust_os::{exit_qemu, hlt_loop, QemuExitCode};
+use rust_os::{exit_qemu, hlt_loop, QemuExitCode, serial_println};
+use lazy_static::lazy_static;
 use core::panic::PanicInfo;
 use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
 
@@ -38,16 +35,10 @@ extern "x86-interrupt" fn double_fault_handler(
     hlt_loop();
 }
 
-#[cfg(not(test))]
 #[no_mangle]
-#[allow(unconditional_recursion)]
 pub extern "C" fn _start() -> ! {
     rust_os::gdt::init();
     init_idt();
-
-    fn stack_overflow() {
-        stack_overflow(); // for each recursion, the return address is pushed
-    }
 
     // trigger a stack overflow
     stack_overflow();
@@ -59,13 +50,14 @@ pub extern "C" fn _start() -> ! {
     hlt_loop();
 }
 
+#[allow(unconditional_recursion)]
+fn stack_overflow() {
+    stack_overflow(); // for each recursion, the return address is pushed
+}
+
+
 /// This function is called on panic.
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    serial_println!("failed");
-    serial_println!("{}", info);
-
-    exit_qemu(QemuExitCode::Failed);
-    hlt_loop();
+    rust_os::test_panic_handler(info)
 }

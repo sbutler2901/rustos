@@ -1,15 +1,12 @@
-#![feature(abi_x86_interrupt)]
 #![no_std]
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(rust_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+#![feature(abi_x86_interrupt)]
 
-#[macro_use]
-extern crate rust_os;
-extern crate x86_64;
-#[macro_use]
-extern crate lazy_static;
-
-use rust_os::{exit_qemu, hlt_loop, QemuExitCode};
+use rust_os::{serial_println, exit_qemu, QemuExitCode, hlt_loop};
+use lazy_static::lazy_static;
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
@@ -36,12 +33,18 @@ extern "x86-interrupt" fn breakpoint_handler(_stack_frame: &mut InterruptStackFr
 }
 // end
 
-
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     init_idt();
 
+    test_main();
+
+    exit_qemu(QemuExitCode::Success);
+    hlt_loop();
+}
+
+#[test_case]
+fn test_exception_breakpoint() {
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
 
@@ -56,18 +59,10 @@ pub extern "C" fn _start() -> ! {
             serial_println!("Breakpoint handler was called {} times", other);
         }
     }
-
-    exit_qemu(QemuExitCode::Success);
-    hlt_loop();
 }
 
 /// This function is called on panic.
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    serial_println!("failed");
-    serial_println!("{}", info);
-
-    exit_qemu(QemuExitCode::Success);
-    hlt_loop();
+    rust_os::test_panic_handler(info)
 }

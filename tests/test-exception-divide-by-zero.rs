@@ -1,16 +1,13 @@
+#![no_std]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(rust_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
-#![no_std]
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-#[macro_use]
-extern crate rust_os;
-extern crate x86_64;
-#[macro_use]
-extern crate lazy_static;
-
-use rust_os::{exit_qemu, hlt_loop, QemuExitCode};
+use rust_os::{exit_qemu, hlt_loop, QemuExitCode, serial_println};
+use lazy_static::lazy_static;
 use core::panic::PanicInfo;
 use x86_64::structures::idt::{InterruptStackFrame, InterruptDescriptorTable};
 
@@ -34,7 +31,6 @@ extern "x86-interrupt" fn divide_error_handler(
     hlt_loop();
 }
 
-#[cfg(not(test))]
 #[no_mangle]
 #[allow(const_err)]
 pub extern "C" fn _start() -> ! {
@@ -53,17 +49,12 @@ pub extern "C" fn _start() -> ! {
     serial_println!("failed");
     serial_println!("No exception occurred");
 
-    exit_qemu(QemuExitCode::Success);
+    exit_qemu(QemuExitCode::Failed);
     hlt_loop();
 }
 
 /// This function is called on panic.
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    serial_println!("failed");
-    serial_println!("{}", info);
-
-    exit_qemu(QemuExitCode::Failed);
-    hlt_loop();
+    rust_os::test_panic_handler(info)
 }
