@@ -10,29 +10,25 @@
 // to prevent no_main from causing it to be ignored
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
 use rust_os::{println, serial_println};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use bootloader::{bootinfo::BootInfo, entry_point};
 use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
-//use x86_64::structures::paging::RecursivePageTable;
 
 entry_point!(kernel_main);
 
 // The function expected in linker for the start of the program
-fn kernel_main(_boot_info: &'static BootInfo) -> ! {
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use rust_os::allocator; // new import
     use rust_os::memory::{self, BootInfoFrameAllocator};
-    use x86_64::{structures::paging::Page, VirtAddr};
+    use x86_64::{VirtAddr};
 
     println!("Hello World{}", "!");
     serial_println!("Hello Host{}", "!");
 
     rust_os::init();
-
-    // Call the test framework entry point when testing
-    #[cfg(test)]
-    test_main();
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
@@ -64,6 +60,12 @@ fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     println!("current reference count is {}", Rc::strong_count(&cloned_reference));
     core::mem::drop(reference_counted);
     println!("reference count is {} now", Rc::strong_count(&cloned_reference));
+
+
+    // Call the test framework entry point when testing
+    #[cfg(test)]
+    test_main();
+
     println!("It did not crash!");
     rust_os::hlt_loop();
 }

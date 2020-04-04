@@ -10,7 +10,10 @@
 // to prevent no_main from causing it to be ignored
 #![reexport_test_harness_main = "test_main"]
 
-extern crate bootloader;
+extern crate alloc;
+
+use core::panic::PanicInfo;
+use x86_64::instructions::port::Port;
 
 #[macro_use]
 pub mod vga_buffer;
@@ -20,8 +23,6 @@ pub mod interrupts;
 pub mod keyboard;
 pub mod memory;
 pub mod allocator;
-
-use core::panic::PanicInfo;
 
 pub fn init() {
     gdt::init(); // load GDT
@@ -49,8 +50,6 @@ pub enum QemuExitCode {
 }
 
 pub fn exit_qemu(exit_code: QemuExitCode) {
-    use x86_64::instructions::port::Port;
-
     // unsafe: relies on fact that a special QEMU device is attached to the I/O port w/ address 0xf4
     // Provides exiting qemu without a 'proper' shutdown
     unsafe {
@@ -80,7 +79,6 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 
 #[cfg(test)]
 use bootloader::{entry_point, BootInfo};
-use x86_64::instructions::port::Port;
 
 #[cfg(test)]
 entry_point!(test_kernel_main);
